@@ -1,0 +1,28 @@
+remote_theme: Antho-Instructor/workshop-theme
+
+# disable the jekyll-titles-from-headings plugin,
+# so first h1 will not be used as prior title of your page
+titles_from_headings:
+  enabled: false
+
+# use README.md as the site index even though it has front matter,
+# otherwise GitHub Pages only builds README.html and / returns a 404
+readme_index:
+  with_frontmatter: true
+
+defaults:
+  - scope:
+      path: "" # an empty string here means all files in the project
+    values:
+      layout: "default" # possible values: default or tic-tac
+
+style: agorski # possible values: agorski, dev, data, ciber or design.
+title: TP Authentification avec React
+description: "TP solo : authentification React de bout en bout (JWT, cookie HttpOnly, Bearer)"
+show_clone: false
+show_toc: true
+lang: fr
+
+# Dépôt de code qui accompagne ce workshop (starter + solution).
+# ⚠️ À REMPLACER par l'URL réelle une fois le dépôt poussé sur GitHub.
+code_repo: https://github.com/VOTRE-ORG/tp-auth-react
