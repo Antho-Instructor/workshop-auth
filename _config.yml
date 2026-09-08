@@ -25,4 +25,4 @@ lang: fr
 
 # Dépôt de code qui accompagne ce workshop (starter + solution).
 # ⚠️ À REMPLACER par l'URL réelle une fois le dépôt poussé sur GitHub.
-code_repo: https://github.com/Antho-Instructor/tp-auth-react
+code_repo: https://github.com/Antho-Instructor/tp-auth
