@@ -148,22 +148,56 @@ Pas de vraie base : `lowdb` lit/écrit `server/db.json`. Au premier lancement, d
 sont créés.
 
 👉 **Ouvre `server/db.json`** après le premier `npm run dev`. Repère le champ
-**`passwordHash`** (`$2b$10$…`) : il n'y a **jamais** de mot de passe en clair. Si la base
-fuite, les comptes ne sont pas immédiatement compromis.
+**`passwordHash`** (`$argon2id$v=19$m=19456,t=2,p=1$…`) : il n'y a **jamais** de mot de
+passe en clair. Si la base fuite, les comptes ne sont pas immédiatement compromis.
 
-## A.2 · Le hachage - `auth/password.ts` (bcrypt)
+## A.2 · Le hachage - `auth/password.ts` (Argon2id)
 
 ```ts
-hashPassword(plain); // "$2b$10$…"   - au seed / à l'inscription
-verifyPassword(plain, hash); // true / false - au login
+hashPassword(plain); // "$argon2id$v=19$m=19456,t=2,p=1$…"  - au seed / à l'inscription
+verifyPassword(plain, hash); // true / false                 - au login
 ```
 
-À retenir sur **bcrypt** :
+À retenir sur **Argon2id** (gagnant de la _Password Hashing Competition_ 2015, algo
+recommandé par l'OWASP pour les nouveaux projets) :
 
-- **sens unique** : on ne « déchiffre » pas un hash ; on re-hache la saisie et on compare.
-- **sel intégré** : deux fois `password123` → deux hash **différents** (pas de rainbow tables).
-- **lent volontairement** (`cost = 10` → 2¹⁰ itérations) : négligeable pour un login,
-  ruineux pour du brute-force massif.
+- **sens unique** : on ne « déchiffre » jamais un hash ; on re-hache la saisie et on compare.
+- **sel intégré** : deux fois `password123` → deux hash **différents** → pas de _rainbow
+  tables_, et impossible de repérer deux comptes qui partagent le même mot de passe.
+- **coûteux en CPU _et_ en RAM** (_memory-hard_) : ici `m = 19456` Kio (≈ 19 Mio) de
+  mémoire, `t = 2` itérations, `p = 1`. ≈ 50 ms pour un login, ruineux pour du brute-force
+  massif.
+- **`id`** = combine Argon2i (résiste aux attaques par canaux auxiliaires) et Argon2d
+  (résiste au crackage GPU).
+- hash au format **PHC auto-décrit** : la chaîne embarque l'algo, la version et les
+  paramètres, donc `verifyPassword` n'a besoin de rien d'autre pour recalculer.
+
+### bcrypt vs Argon2id
+
+Les deux sont des fonctions de hachage **lentes** et **salées**, faites pour stocker des mots
+de passe (jamais `md5` / `sha256` seuls, trop rapides). La vraie question : **combien coûte
+à un attaquant chaque mot de passe testé ?**
+
+| Critère              | **bcrypt** (1999)                          | **Argon2id** (2015) - _notre choix_             |
+| -------------------- | ----------------------------------------- | ---------------------------------------------- |
+| Coût réglable        | CPU seulement (`cost` → 2^cost itérations) | CPU (`t`) **+** mémoire (`m`) **+** threads (`p`) |
+| _Memory-hard_        | ❌ non (~4 Kio fixes)                      | ✅ oui → neutralise GPU / ASIC / FPGA           |
+| Longueur du mdp      | ⚠️ **tronque à 72 octets**                 | pas de limite pratique                         |
+| Statut OWASP         | encore acceptable                         | **recommandé** pour un nouveau projet          |
+| Réglage conseillé    | `cost` ≥ 12                               | `m` = 19 Mio, `t` = 2, `p` = 1                 |
+
+En clair : bcrypt fait **perdre du temps CPU** à l'attaquant. Argon2id l'oblige **en plus** à
+immobiliser beaucoup de RAM par essai. Or c'est précisément ce qui manque sur une carte
+graphique qui voudrait tester des millions de candidats en parallèle : c'est le point faible
+historique de bcrypt.
+
+Le backend utilise `@node-rs/argon2` (binaire précompilé Rust) : `npm install` marche partout
+sans toolchain de build.
+{: .alert-info}
+
+> **Et une base déjà en bcrypt ?** On ne « convertit » pas un hash (sens unique). En pratique
+> on re-hache le mot de passe au **prochain login réussi**. Ici `verifyPassword` renvoie
+> simplement `false` si le hash n'est pas au format Argon2id.
 
 ## A.3 · Le token - `auth/jwt.ts`
 
@@ -286,6 +320,7 @@ puis appelle `GET /auth/me` **sans cookie** mais avec un header
 Avant de coder, tu dois pouvoir expliquer à voix haute :
 
 - pourquoi `passwordHash` et pas `password` en base ;
+- ce qu'apporte Argon2id que bcrypt n'a pas (indice : la RAM) ;
 - ce que contient le payload d'un JWT et pourquoi ce n'est pas secret ;
 - ce qui rend le token infalsifiable ;
 - ce que fait `HttpOnly` et pourquoi ça remplace `localStorage` ;
@@ -317,19 +352,37 @@ Tout le reste du front est fourni : `App.tsx` (routes déjà branchées), `Navba
 `HomePage.tsx`, `ProfilePage.tsx`. Il te reste **3 points**.
 {: .alert-info}
 
+> **Les solutions ne sont pas données ici.** Sous chaque TODO, une échelle de blocs
+> **`▸ Indice`** que tu déroules **un par un, seulement quand tu bloques**. Les indices
+> n'écrivent **aucune ligne de code** : ils posent la bonne question, pointent le bon fichier
+> ou la bonne page de doc, et te laissent écrire. Essaie **au moins 10 minutes** par TODO
+> avant d'en ouvrir un. Le corrigé complet (`solution/`) n'arrive qu'après la remise.
+{: .alert-warning}
+
 ## 🔹 TODO 1 · `src/api/client.ts` - envoyer le cookie
 
 **_10 minutes_**
 
-Le wrapper `fetch` est écrit ; il manque **une ligne**. Dans l'objet passé à `fetch`, ajoute :
+Le wrapper `fetch` est écrit ; il manque **une seule ligne** dans l'objet de config passé à
+`fetch(url, { … })`.
 
-```ts
-credentials: 'include',
-```
+<details markdown="1">
+<summary>▸ Indice 1 · observe d'abord</summary>
 
-**Pourquoi.** Front (`:5173`) et API (`:3001`) sont sur deux origines. Par défaut, le
-navigateur **n'attache pas** les cookies en cross-origin. `credentials: 'include'` l'y
-autorise (le serveur, lui, répond déjà `Access-Control-Allow-Credentials: true`, cf. A.9).
+Connecte-toi (le TODO 3 fait), puis onglet _Network_ → la requête `me`. Regarde ses
+en-têtes **de requête** : y a-t-il un `Cookie:` ? Le cookie a pourtant bien été posé par le
+`login` (onglet _Application_ → _Cookies_). Pourquoi le navigateur ne le renvoie-t-il pas
+tout seul, alors qu'il le ferait sur un site classique ?
+</details>
+
+<details markdown="1">
+<summary>▸ Indice 2 · la piste</summary>
+
+Front et API sont sur **deux origines** (`:5173` ≠ `:3001`). L'objet de config de `fetch`
+a **une** option qui décide si les cookies franchissent une origine. Cherche
+_« fetch credentials »_ sur MDN : trois valeurs possibles, le défaut n'inclut **pas** le
+cross-origin. À toi de choisir la bonne et de l'ajouter au bon endroit dans `client.ts`.
+</details>
 
 **Vérif.** Après avoir fait aussi le TODO 3, connecte-toi et ouvre l'onglet _Network_ :
 la requête `me` part avec un `Cookie: token=…` et répond `200`. Sans la ligne → `401` partout.
@@ -341,18 +394,30 @@ la requête `me` part avec un `Cookie: token=…` et répond `200`. Sans la lign
 Aujourd'hui le composant fait `return <Outlet />` : **il ne protège rien**. Ouvre `/profile`
 sans être connecté → la page s'affiche quand même.
 
-À écrire à partir de `status` :
-
-```tsx
-if (status === "loading") return <p className="p-8 text-center">Chargement…</p>;
-if (status === "anonymous") return <Navigate to="/login" replace />;
-return <Outlet />;
-```
+À écrire à partir de `status` (récupéré via `useAuth()`) :
 
 - `'loading'` : le `/auth/me` du contexte n'a pas encore répondu → on **attend**. Si on
   redirigeait tout de suite, on éjecterait un utilisateur pourtant connecté à **chaque F5**.
 - `'anonymous'` : pas de session → `/login`.
-- sinon : `<Outlet />` rend la route enfant (`ProfilePage`).
+- sinon : on rend la route enfant (`ProfilePage`).
+
+<details markdown="1">
+<summary>▸ Indice 1 · pose le problème</summary>
+
+`status` vaut `'loading'`, puis `'authenticated'` **ou** `'anonymous'`. Écris sur papier
+_ce que l'utilisateur doit voir_ dans chacun des trois cas. Question piège : que se
+passe-t-il si tu rediriges dès `'loading'`, alors que le `/auth/me` du contexte n'a pas
+encore répondu ? (rejoue le scénario du F5.)
+</details>
+
+<details markdown="1">
+<summary>▸ Indice 2 · les bons outils</summary>
+
+Tu dois rediriger **pendant le rendu**, pas dans un `useEffect`. `react-router-dom` expose
+**un composant** pour rediriger et **un composant** pour afficher la route enfant d'une route
+parente. Retrouve leurs noms dans la doc React Router v7. Et regarde la prop `replace` : avec
+ou sans, que fait le bouton « Précédent » du navigateur après la redirection ?
+</details>
 
 C'est déjà câblé dans `App.tsx` :
 
@@ -368,24 +433,36 @@ C'est déjà câblé dans `App.tsx` :
 
 **_15 minutes_**
 
-Le formulaire contrôlé est écrit (`email`, `password`, `error`, `submitting`). Remplis
-`handleSubmit` (après `e.preventDefault()`) :
+Le formulaire **contrôlé** est écrit (`email`, `password`, `error`, `submitting`). Il te reste
+à remplir `handleSubmit`, après le `e.preventDefault()` déjà présent.
 
-```ts
-setError(null);
-setSubmitting(true);
-try {
-	await login(email, password); // le contexte fait le POST et pose l'état
-	navigate("/profile"); // succès → page protégée
-} catch (err) {
-	setError(err instanceof ApiError ? err.message : "Erreur");
-} finally {
-	setSubmitting(false);
-}
-```
+<details markdown="1">
+<summary>▸ Indice 1 · liste les étapes</summary>
+
+Tu as tout le nécessaire : `login` (du contexte), `navigate` (de `useNavigate()`), et les
+setters `setError` / `setSubmitting`. Écris la séquence à voix haute : que fait-on **avant**
+l'appel réseau, **pendant**, en cas de **succès**, en cas d'**échec** ? `login` est `async`.
+</details>
+
+<details markdown="1">
+<summary>▸ Indice 2 · le chemin d'erreur</summary>
+
+`login` **lève** quand l'API répond `401` : ce n'est pas une valeur de retour à tester, il
+faut l'**attraper**. Le message à afficher est déjà dans l'exception : regarde `ApiError` et
+sa propriété `message` (le texte vient de l'API, cf. A.4).
+</details>
+
+<details markdown="1">
+<summary>▸ Indice 3 · le piège</summary>
+
+Rejoue un login **raté** : le bouton reste-t-il sur « Connexion… » et désactivé ? Quel
+mécanisme d'un `try/catch` garantit qu'un bout de code s'exécute **dans tous les cas**,
+succès comme erreur ?
+</details>
 
 **Vérif.** `alice@ynov.com` / `password123` → arrivée sur `/profile`. Mauvais mot de passe →
-message `Identifiants invalides` (venu de l'API, cf. A.4).
+message `Identifiants invalides` (venu de l'API, cf. A.4). Le bouton ne doit pas rester
+désactivé après une erreur.
 
 ---
 
@@ -450,5 +527,4 @@ Reformule pour toi-même, sans regarder :
 - **une** limite du modèle stateless (JWT non révocable avant `exp`) ;
 - **où** vit le token à chaque instant (jamais dans ton code React).
 
-Si un de ces points est encore flou, relis la Partie 2 et compare avec `solution/` dans le
-dépôt de code.
+Si un de ces points est encore flou, relis la Partie 2 et compare avec `solution/` qui te sera fournie après la remise.
