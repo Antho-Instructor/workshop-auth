@@ -350,7 +350,6 @@ Au montage, le provider appelle **`GET /auth/me`** une fois : c'est le mécanism
 
 Tout le reste du front est fourni : `App.tsx` (routes déjà branchées), `Navbar.tsx`,
 `HomePage.tsx`, `ProfilePage.tsx`. Il te reste **3 points**.
-{: .alert-info}
 
 > **Les solutions ne sont pas données ici.** Sous chaque TODO, une échelle de blocs
 > **`▸ Indice`** que tu déroules **un par un, seulement quand tu bloques**. Les indices

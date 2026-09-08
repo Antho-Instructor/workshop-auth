@@ -1,0 +1,72 @@
+/*
+ * Override local du fichier de palette du thème (remote_theme workshop-theme, style « agorski »).
+ *
+ * Ce fichier remplace assets/css/theme-agorski.css fourni par le thème : Jekyll donne
+ * la priorité aux fichiers du dépôt du site. Il est chargé APRÈS style.css, donc les
+ * règles .alert ci-dessous priment.
+ *
+ * Pourquoi : dans le thème, --info-color ET --warning-color sont deux bleus très proches
+ * (#a9c4f5 / #5b8cf0). Deux encadrés qui se suivent donnaient un « aplat de bleu ».
+ * Ici : fond quasi-blanc + liseré coloré à gauche. info = bleu, warning = ambre.
+ */
+
+:root {
+    --main-color: #1A56DB;
+    --main-color-light: #dde8fb;
+    --main-color-200: #c3d7f7;
+    --main-color-inverse: var(--white);
+
+    --main-color-banner: var(--white);
+    --main-color-banner-inverse: var(--main-color);
+    --main-color-navbar: transparent;
+    --main-color-navbar-inverse: var(--dark);
+
+    /* gardés pour compat ; les .alert n'utilisent plus ces variables pour le fond */
+    --warning-color: #fbf3e6;
+    --warning-color-inverse: #1D1D1B;
+    --warning-outline-color: #b45309;
+
+    --info-color: #eff5fe;
+    --info-color-inverse: #1D1D1B;
+
+    --main-link-color: var(--main-color);
+}
+
+/* --- Encadrés : fond quasi-blanc + liseré à gauche --------------------------- */
+[class^="alert"] {
+    background-color: #f8fafc;
+    color: var(--dark);
+    font-weight: 500;
+    border: 1px solid #e6eaf1;
+    border-left: 4px solid var(--main-color);
+    box-shadow: none;
+    outline: none;
+}
+
+[class^="alert"] a {
+    color: var(--main-link-color);
+}
+
+[class^="alert"]::before {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, .12);
+}
+
+.alert-info {
+    background-color: #eff5fe;        /* bleu très pâle */
+    color: var(--dark);
+    border-left-color: #2563eb;
+}
+
+.alert-info::before {
+    color: #2563eb;
+}
+
+.alert-warning {
+    background-color: #fbf3e6;        /* ambre très pâle */
+    color: var(--dark);
+    border-left-color: #b45309;
+}
+
+.alert-warning::before {
+    color: #b45309;
+}
