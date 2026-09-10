@@ -348,8 +348,10 @@ via `useAuth()` :
 Au montage, le provider appelle **`GET /auth/me`** une fois : c'est le mécanisme du
 « rester connecté » décrit en A.8.
 
-Tout le reste du front est fourni : `App.tsx` (routes déjà branchées), `Navbar.tsx`,
-`HomePage.tsx`, `ProfilePage.tsx`. Il te reste **3 points**.
+Tout le reste du front est fourni : `router.tsx` (l'arbre des routes - **React Router v7,
+_data mode_** : `createBrowserRouter([...])`, un tableau d'objets et non du JSX
+`<Routes>/<Route>`), `main.tsx` (`<RouterProvider>`), `App.tsx` (layout : `Navbar` +
+`<Outlet />`), `Navbar.tsx`, `HomePage.tsx`, `ProfilePage.tsx`. Il te reste **3 points**.
 
 > **Les solutions ne sont pas données ici.** Sous chaque TODO, une échelle de blocs
 > **`▸ Indice`** que tu déroules **un par un, seulement quand tu bloques**. Les indices
@@ -418,13 +420,17 @@ parente. Retrouve leurs noms dans la doc React Router v7. Et regarde la prop `re
 ou sans, que fait le bouton « Précédent » du navigateur après la redirection ?
 </details>
 
-C'est déjà câblé dans `App.tsx` :
+C'est déjà câblé dans `src/router.tsx` (React Router v7, _data mode_) : une route parente
+`ProtectedRoute` sans `path`, dont `/profile` est l'enfant.
 
 ```tsx
-<Route element={<ProtectedRoute />}>
-	<Route path="/profile" element={<ProfilePage />} />
-</Route>
+{
+	element: <ProtectedRoute />,
+	children: [{ path: "/profile", element: <ProfilePage /> }],
+}
 ```
+
+`ProtectedRoute` rend `<Outlet />` (la route enfant) ou redirige selon `status`.
 
 **Vérif.** Déconnecté : `/profile` → redirige vers `/login`. Connecté : `/profile` s'affiche.
 
